@@ -2,35 +2,39 @@
 
 require 'pp'
 
-def rec(okeys, akeys, ikeys, opened, ohist, ahist)
+def rec(okeys, akeys, opened, ohist, ihist)
   if okeys.size == opened.size
-    pp opened
+    PP.pp(opened, $stderr)
     opened
   else
-    ohist.each do |i, o|
-      if o > ahist[i]
-        puts "hit! depth=#{opened.size}"
-        return nil
-      end
-    end
     r = nil
     okeys.each_with_index do |o, i|
       next if opened.include?(i)
-      j = ikeys.index(o)
-      next if j.nil?
+      if ihist[o].zero?
+        as = true
+        akeys.each_with_index do |ak, ai|
+          next if ai == i
+          as = false if ak.include?(o)
+        end
+        return nil if as
+      end
+    end
+    okeys.each_with_index do |o, i|
+      next if opened.include?(i)
+      next if ihist[o].zero?
       opened2 = opened+[i]
       next if r && (r <=> opened2) < 0
-      ikeys2 = ikeys.dup
-      ikeys2.delete_at(j)
+      ihist2 = ihist.dup
+      ihist2[o] -= 1
+      akeys[i].each do |j|
+        ihist2[j] += 1
+      end
       ohist2 = ohist.dup
       ohist2[o] -= 1
-      ahist2 = ahist.dup
-      ahist2[o] -= 1
-      s = rec(okeys, akeys, ikeys2+akeys[i], opened2, ohist2, ahist2)
+      s = rec(okeys, akeys, opened2, ohist2, ihist2)
       next if s.nil?
       r = s if r.nil? || (s <=> r) < 0
     end
-    puts "abort: #{opened.join " "}" if r.nil?
     r
   end
 end
@@ -41,14 +45,15 @@ t.times do |i|
   okeys = []
   akeys = []
   ohist = {}
+  ihist = {}
   ohist.default = 0
-  ahist = {}
-  ahist.default = 0
+  ihist.default = 0
   k, n = gets.chomp.split.map(&:to_i)
   ikeys = gets.chomp.split.map(&:to_i)
   ikeys.each do |j|
-    ahist[j] += 1
+    ihist[j] += 1
   end
+  ahist = ihist.dup
   n.times do
     ak = gets.chomp.split.map(&:to_i)
     okeys << ak.shift
@@ -61,7 +66,11 @@ t.times do |i|
   okeys.each do |j|
     ohist[j] += 1
   end
-  pp [okeys, akeys, ikeys, ohist, ahist]
-  r = rec(okeys, akeys, ikeys, [], ohist, ahist)
+  PP.pp([okeys, akeys, ohist, ihist, ahist], $stderr)
+  s = false
+  ohist.each do |i, o|
+    s = true if o > ahist[i]
+  end
+  r = s ? nil : rec(okeys, akeys, [], ohist, ihist)
   puts "Case ##{i+1}: #{r ? r.map(&:next).join(" ") : "IMPOSSIBLE"}"
 end
