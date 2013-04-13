@@ -4,14 +4,17 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+#include <cassert>
 
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <set>
 
 
 using namespace std;
 
+set<uint64_t> fairset;
 
 bool
 fair(uint64_t x)
@@ -36,14 +39,20 @@ scan(uint64_t a, uint64_t b)
         int c = 0;
         uint64_t smin = sqrt(a);
         uint64_t smax = sqrt(b);
+        assert(smin*smin <= a);
+        assert((smin+1)*(smin+1) > a);
+        assert(smax*smax <= b);
+        assert((smax+1)*(smax+1) > b);
         for (uint64_t s = smin; s <= smax; s++) {
                 if (!fair(s))
                         continue;
                 uint64_t ss = s * s;
                 if (ss < a)
                         continue;
-                if (fair(ss))
+                if (fair(ss)) {
+                        fairset.insert(ss);
                         c++;
+                }
         }
         return c;
 }
@@ -52,6 +61,8 @@ scan(uint64_t a, uint64_t b)
 int
 main(int argc, char **argv)
 {
+        scan(1, 1000000000000000);
+
         int T;
         string  lineT;
         getline(cin, lineT);
@@ -64,7 +75,13 @@ main(int argc, char **argv)
                 stringstream ssAB(lineAB);
                 uint64_t a, b;
                 ssAB >> a >> b;
-                cout << "Case #" << i+1 << ": " << scan(a, b) << endl;
+                int c = 0;
+                for (set<uint64_t>::iterator it = fairset.begin();
+                                it != fairset.end(); it++) {
+                        if (a <= (*it) && (*it) <= b)
+                                c++;
+                }
+                cout << "Case #" << i+1 << ": " << c << endl;
         }
 
         return 0;
