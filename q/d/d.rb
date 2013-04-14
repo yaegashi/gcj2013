@@ -2,40 +2,51 @@
 
 require 'pp'
 
-def rec(okeys, akeys, opened, ohist, ihist)
+def reachable(okeys, akeys, opened, ihist)
+  ihist2 = ihist.dup
+  opened2 = opened.dup
+  count = 0
+  while opened2.size < okeys.size
+    openable = []
+    ihist2.each do |i, n|
+      next if n.zero?
+      okeys.each_with_index do |o, j|
+        openable += [j] if !opened2.include?(j) && o == i
+      end
+      pp [i,n]
+    end
+    return false if openable.empty? 
+    opened2 += openable
+    openable.each do |n|
+      akeys[n].each do |i|
+        ihist2[i] += 1
+      end
+    end
+  end
+  return true
+end
+
+
+def rec(okeys, akeys, opened, ihist)
   if okeys.size == opened.size
     PP.pp(opened, $stderr)
     opened
   else
-    r = nil
-    okeys.each_with_index do |o, i|
-      next if opened.include?(i)
-      if ihist[o].zero?
-        as = true
-        akeys.each_with_index do |ak, ai|
-          next if ai == i
-          as = false if ak.include?(o)
-        end
-        return nil if as
-      end
-    end
+    return nil unless reachable(okeys, akeys, opened, ihist)
     okeys.each_with_index do |o, i|
       next if opened.include?(i)
       next if ihist[o].zero?
-      opened2 = opened+[i]
-      next if r && (r <=> opened2) < 0
+      opened2 = opened + [i]
       ihist2 = ihist.dup
       ihist2[o] -= 1
       akeys[i].each do |j|
         ihist2[j] += 1
       end
-      ohist2 = ohist.dup
-      ohist2[o] -= 1
-      s = rec(okeys, akeys, opened2, ohist2, ihist2)
-      next if s.nil?
-      r = s if r.nil? || (s <=> r) < 0
+      s = rec(okeys, akeys, opened2, ihist2)
+      return s unless s.nil?
     end
-    r
+    PP.pp(opened, $stderr)
+    nil
   end
 end
 
@@ -71,6 +82,6 @@ t.times do |i|
   ohist.each do |i, o|
     s = true if o > ahist[i]
   end
-  r = s ? nil : rec(okeys, akeys, [], ohist, ihist)
+  r = s ? nil : rec(okeys, akeys, [], ihist)
   puts "Case ##{i+1}: #{r ? r.map(&:next).join(" ") : "IMPOSSIBLE"}"
 end
