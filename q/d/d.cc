@@ -5,76 +5,68 @@
 
 using namespace std;
 
-const int MAXK = 200;
+const int MAXK = 201;
 
-typedef std::vector<bool> opens_t;
-typedef std::vector<uint16_t> keys_t;
-typedef std::vector<uint16_t> hist_t;
+typedef vector<bool> opens_t;
+typedef vector<int> keys_t;
+typedef vector<int> hist_t;
 
 
 bool
-cmp(const hist_t &r, hist_t &s)
-{
-        int rsize = r.size(), ssize = s.size();
-        for (int i = 0; i < rsize && i < ssize; i++)
-                if (r[i] < s[i])
-                        return true;
-        return false;
+reachable(const int *okeys, const keys_t *akeys,
+                opens_t opens, keys_t ikeys, hist_t hist) {
+        while (hist.size() < opens.size()) {
+                hist_t openable;
+                for (int i = 0; i < ikeys.size(); i++) {
+                        if (ikeys[i] == 0)
+                                continue;
+                        for (int j = 0; j < opens.size(); j++)
+                                if (!opens[j] && okeys[j] == i)
+                                        openable.push_back(j);
+                }
+                if (openable.empty())
+                        return false;
+                for (int i = 0; i < openable.size(); i++) {
+                        int n = openable[i];
+                        opens[n] = true;
+                        hist.push_back(n);
+                        for (int j = 0; j < akeys[n].size(); j++)
+                                ikeys[j] += akeys[n][j];
+                }
+        }
+        return true;
 }
 
 
 const hist_t
-rec(const keys_t &okeys, const keys_t *akeys, const opens_t &opens, const keys_t &ikeys, const hist_t &hist)
+rec(const int *okeys, const keys_t *akeys,
+                const opens_t &opens, const keys_t &ikeys, const hist_t &hist)
 {
         if (opens.size() == hist.size()) {
                 return hist;
         }
         else {
-                hist_t r;
+                if (!reachable(okeys, akeys, opens, ikeys, hist))
+                        return hist_t();
                 for (int i = 0; i < opens.size(); i++) {
                         if (opens[i])
                                 continue;
                         int o = okeys[i];
-                        if (ikeys[o] > 0)
-                                continue;
-                        bool as = true;
-                        for (int j = 0; j < opens.size(); j++) {
-                                if (j == i)
-                                        continue;
-                                if (akeys[j][o] > 0)
-                                        as = false;
-                        }
-                        if (as)
-                                return r;
-                }
-                for (int i = 0; i < opens.size(); i++) {
-                        if (opens[i])
-                                continue;
-                        int q = okeys[i];
-                        if (!ikeys[q])
-                                continue;
-                        hist_t hist2(hist);
-                        hist2.push_back(i);
-                        if (cmp(r, hist2))
+                        if (ikeys[o] == 0)
                                 continue;
                         opens_t opens2(opens);
                         keys_t ikeys2(ikeys);
+                        hist_t hist2(hist);
                         opens2[i] = true;
-                        ikeys2[q]--;
+                        ikeys2[o]--;
+                        hist2.push_back(i);
                         for (int j = 0; j < akeys[i].size(); j++)
                                 ikeys2[j] += akeys[i][j];
                         hist_t s = rec(okeys, akeys, opens2, ikeys2, hist2);
-                        if (s.size() == 0)
-                                continue;
-                        r = s;
+                        if (s.size() > 0)
+                                return s;
                 }
-                if (false && r.size() == 0) {
-                        cerr << "abort:";
-                        for (int i = 0; i < hist.size(); i++)
-                                cerr << " " << hist[i];
-                        cerr << endl;
-                }
-                return r;
+                return hist_t();
         }
 }
 
@@ -94,7 +86,8 @@ main(int argc, char **argv)
                 stringstream ssKN(line);
                 ssKN >> K >> N;
 
-                keys_t okeys(N, 0), akeys[N];
+                int okeys[N];
+                keys_t akeys[N];
                 keys_t ikeys(MAXK, 0), osum(MAXK, 0), asum(MAXK, 0);
 
                 getline(cin, line);
@@ -122,6 +115,7 @@ main(int argc, char **argv)
                         }
                 }
 
+#if 0
                 cerr << "ikeys:";
                 for (int j = 1; j <= 10; j++)
                         cerr << " " << j << ":" << ikeys[j];
@@ -143,6 +137,7 @@ main(int argc, char **argv)
                 for (int j = 1; j <= 10; j++)
                         cerr << " " << j << ":" << asum[j];
                 cerr << endl;
+#endif
 
                 hist_t r;
                 bool s = true;
